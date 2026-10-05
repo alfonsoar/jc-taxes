@@ -425,9 +425,10 @@ test.describe('Color by year built', () => {
     await mockGeoJSON(page)
     await page.goto('/?agg=lot&cb=yr_built')
     await waitForLoad(page)
-    // Gradient endpoint labels (the title's year picker also reads 2025, hence `.last()`).
+    // Gradient endpoint labels (the title's year picker also reads 2025, hence `.last()`;
+    // `visible` skips the settings' select options).
     await expect(page.getByText('1870', { exact: true })).toBeVisible()
-    await expect(page.getByText('2025', { exact: true }).last()).toBeVisible()
+    await expect(page.getByText('2025', { exact: true }).filter({ visible: true }).last()).toBeVisible()
   })
 
   test('hoverbox highlights yr_built when coloring active', async ({ page }) => {
@@ -447,6 +448,34 @@ test.describe('Color by year built', () => {
     await page.keyboard.press('b')
     await waitForView(page, 'block')
     await expect(page).not.toHaveURL(/[?&]cb=yr_built/)
+  })
+})
+
+test.describe('Built since', () => {
+  // Lot fixture: 101-23.01 built 2022 (av $2.0M, paid $35,588), 101-2 built
+  // 1990 (av $0.5M), 302-21 built 1968; 4 lots have no year built.
+  test('bs=21 lights lots built since 2021 and reports their share', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?a=l&bs=21')
+    await waitForLoad(page)
+    await expect(page.getByTestId('built-since-label')).toHaveText('· built since 2021')
+    await expect(page.getByTestId('totals-chip')).toHaveText('$36K (49% of paid) · 1 lot')
+    const stats = page.getByTestId('built-since-stats')
+    await expect(stats).toContainText('2026 taxable assessed $2.0M (80% of citywide)')
+    await expect(stats).toContainText('4 lots with no year built (excluded)')
+  })
+
+  test('settings select sets bs; leaving lot / unit views clears it', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?a=l')
+    await waitForLoad(page)
+    await page.getByLabel('Built since').selectOption('2021')
+    await expect(page).toHaveURL(/[?&]bs=21(&|$)/)
+    await expect(page.getByTestId('totals-chip')).toContainText('· 1 lot')
+    await page.keyboard.press('b')
+    await waitForView(page, 'block')
+    await expect(page).not.toHaveURL(/[?&]bs=/)
+    await expect(page.getByTestId('built-since-stats')).toHaveCount(0)
   })
 })
 
