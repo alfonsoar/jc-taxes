@@ -2281,7 +2281,7 @@ export default function MapView() {
                   </span>
                 </Tooltip>
               )}
-              {focusTest && (
+              {(portfolio || region) && (
                 <button
                   onClick={() => { setPortfolio(''); setRegion(''); setBuiltSince(undefined) }}
                   title="Clear highlight"

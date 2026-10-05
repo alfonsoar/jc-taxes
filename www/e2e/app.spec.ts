@@ -483,6 +483,9 @@ test.describe('Built since', () => {
     await mockGeoJSON(page)
     await page.goto('/?a=l&bs=21')
     await waitForLoad(page)
+    // Built-since is the only focus, so the combined "Clear highlight" button is not shown;
+    // only the inline built-since clear is present.
+    await expect(page.getByRole('button', { name: 'Clear highlight' })).toHaveCount(0)
     await page.getByTestId('built-since-label').click()
     await expect(page).not.toHaveURL(/[?&]bs=/)
     await expect(page).toHaveURL(/[?&]a=l(&|$)/)  // still in lot view
