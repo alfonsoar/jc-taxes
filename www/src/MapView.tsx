@@ -2260,13 +2260,23 @@ export default function MapView() {
                 onChange={onFocus}
               />
               {builtSince && (
-                <span data-testid="built-since-label" style={{ opacity: 0.9 }}>· built since {builtSince}</span>
+                <button
+                  data-testid="built-since-label"
+                  onClick={() => setBuiltSince(undefined)}
+                  title="Clear built-since filter"
+                  aria-label="Clear built-since filter"
+                  style={{
+                    pointerEvents: 'auto', cursor: 'pointer', opacity: 0.9,
+                    background: 'none', border: 'none', color: 'inherit',
+                    font: 'inherit', padding: 0,
+                  }}
+                >· built since {builtSince} ✕</button>
               )}
               {chipStats && (
                 <Tooltip content={summary ? <SummaryStats s={summary} aggLabel={summaryAggLabel} /> : null}>
                   <span data-testid="totals-chip" style={{ opacity: 0.9, fontVariantNumeric: 'tabular-nums', cursor: 'help' }}>
                     {abbr(chipStats.paid)}
-                    {builtStats && ` (${pct(builtStats.amount, builtStats.amountAll)} of ${billedYr ? 'billed' : 'paid'})`}
+                    {builtStats && ` (${pct(builtStats.amount, builtStats.amountAll)} of ${builtStats.scoped ? 'focus' : 'citywide'} ${billedYr ? 'billed' : 'paid'})`}
                     {' · '}{chipStats.count.toLocaleString()} {noun}
                   </span>
                 </Tooltip>
@@ -2295,9 +2305,15 @@ export default function MapView() {
                   padding: '2px 10px', borderRadius: 8, textShadow: 'none', whiteSpace: 'normal',
                 }}
               >
-                {ASSESSED_YEAR} taxable assessed {abbr(builtStats.av)} ({pct(builtStats.av, builtStats.avAll)} of citywide)
-                {builtStats.avExempt > 0 && ` · exempt / PILOT ${abbr(builtStats.avExempt)}`}
-                {' · '}{builtStats.unknown.toLocaleString()} {AGG_NOUN[String(aggregateMode)]?.[builtStats.unknown === 1 ? 0 : 1]} with no year built (excluded)
+                {/* Assessed value is a single fixed MOD-IV year; only show it when
+                    that year is in view, so a 2026 figure isn't printed beside a
+                    different year's paid/billed total. */}
+                {yearRounded === ASSESSED_YEAR && (<>
+                  {ASSESSED_YEAR} taxable assessed {abbr(builtStats.av)} ({pct(builtStats.av, builtStats.avAll)} of {builtStats.scoped ? 'focus' : 'citywide'} assessed)
+                  {builtStats.avExempt > 0 && ` · exempt / PILOT ${abbr(builtStats.avExempt)}`}
+                  {' · '}
+                </>)}
+                {builtStats.unknown.toLocaleString()} {AGG_NOUN[String(aggregateMode)]?.[builtStats.unknown === 1 ? 0 : 1]} with no year built (excluded)
               </div>
             )}
           </div>

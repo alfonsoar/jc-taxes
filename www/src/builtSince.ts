@@ -21,9 +21,14 @@ export interface BuiltSinceStats {
   /** Taxable / exempt + PILOT net assessed value. */
   av: number
   avExempt: number
-  /** Citywide (every feature shown this year), for shares. */
+  /** Denominator for shares: the SAME scope as the numerator. When a portfolio
+   * / region focus is active it is that focus's total (not citywide), so a
+   * share like `av / avAll` compares like with like. */
   amountAll: number
   avAll: number
+  /** True when the denominators are scoped to a portfolio / region focus
+   * rather than the whole city (drives the "of <scope>" share label). */
+  scoped: boolean
   /** In the other focus terms but with no known year built (excluded). */
   unknown: number
   unknownAv: number
@@ -36,12 +41,17 @@ export function builtSinceStats(
   /** Portfolio ∧ region test, if any (the other focus terms). */
   otherFocus: ((p: ParcelProperties) => boolean) | null,
 ): BuiltSinceStats {
-  const s: BuiltSinceStats = { count: 0, amount: 0, av: 0, avExempt: 0, amountAll: 0, avAll: 0, unknown: 0, unknownAv: 0 }
+  const s: BuiltSinceStats = { count: 0, amount: 0, av: 0, avExempt: 0, amountAll: 0, avAll: 0, scoped: !!otherFocus, unknown: 0, unknownAv: 0 }
   for (const { properties: p } of features) {
+    // Denominators share the numerator's scope: when a portfolio / region
+    // focus is active, both are that focus's total, so the share isn't a
+    // focus-scoped numerator over a citywide denominator (which read far too
+    // small). Built-since itself is NOT part of the denominator (it's the
+    // thing whose share we report).
+    if (otherFocus && !otherFocus(p)) continue
     const amount = amountOf(p), av = p.av ?? 0
     s.amountAll += amount
     s.avAll += av
-    if (otherFocus && !otherFocus(p)) continue
     if (!p.yr_built) { s.unknown++; s.unknownAv += av; continue }
     if (p.yr_built < since) continue
     s.count++

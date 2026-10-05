@@ -454,15 +454,39 @@ test.describe('Color by year built', () => {
 test.describe('Built since', () => {
   // Lot fixture: 101-23.01 built 2022 (av $2.0M, paid $35,588), 101-2 built
   // 1990 (av $0.5M), 302-21 built 1968; 4 lots have no year built.
-  test('bs=21 lights lots built since 2021 and reports their share', async ({ page }) => {
+  test('bs=21 at the assessed year lights built-since lots and reports their share', async ({ page }) => {
+    await mockGeoJSON(page)
+    // Assessed value is 2026-only data, so view 2026 to see the assessed line.
+    await page.goto('/?a=l&bs=21&y=26')
+    await waitForLoad(page)
+    await expect(page.getByTestId('built-since-label')).toContainText('· built since 2021')
+    await expect(page.getByTestId('totals-chip')).toContainText('$36K (49% of citywide billed) · 1 lot')
+    const stats = page.getByTestId('built-since-stats')
+    await expect(stats).toContainText('2026 taxable assessed $2.0M (80% of citywide assessed)')
+    await expect(stats).toContainText('4 lots with no year built (excluded)')
+  })
+
+  test('away from the assessed year the chip hides the fixed-year assessed value', async ({ page }) => {
+    await mockGeoJSON(page)
+    await page.goto('/?a=l&bs=21')  // default year 2025, not the 2026 assessed year
+    await waitForLoad(page)
+    const stats = page.getByTestId('built-since-stats')
+    // No stale "2026 taxable assessed" figure beside a 2025 total, but the
+    // year-independent unknown-count still shows.
+    await expect(stats).not.toContainText('taxable assessed')
+    await expect(stats).toContainText('4 lots with no year built (excluded)')
+    // Paid share is still reported and still citywide-scoped.
+    await expect(page.getByTestId('totals-chip')).toContainText('of citywide paid')
+  })
+
+  test('built-since label clears only the built-since filter', async ({ page }) => {
     await mockGeoJSON(page)
     await page.goto('/?a=l&bs=21')
     await waitForLoad(page)
-    await expect(page.getByTestId('built-since-label')).toHaveText('· built since 2021')
-    await expect(page.getByTestId('totals-chip')).toHaveText('$36K (49% of paid) · 1 lot')
-    const stats = page.getByTestId('built-since-stats')
-    await expect(stats).toContainText('2026 taxable assessed $2.0M (80% of citywide)')
-    await expect(stats).toContainText('4 lots with no year built (excluded)')
+    await page.getByTestId('built-since-label').click()
+    await expect(page).not.toHaveURL(/[?&]bs=/)
+    await expect(page).toHaveURL(/[?&]a=l(&|$)/)  // still in lot view
+    await expect(page.getByTestId('built-since-stats')).toHaveCount(0)
   })
 
   test('settings select sets bs; leaving lot / unit views clears it', async ({ page }) => {
